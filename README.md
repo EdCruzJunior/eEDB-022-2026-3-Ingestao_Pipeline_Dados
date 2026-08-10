@@ -1,6 +1,6 @@
-# eDBD-022-2026-3 — Ingestão de Dados
+# eEDB-022-2026-3 — Ingestão de Dados
 
-Repositório público referente às atividades da disciplina **eDBD-022-2026-3 – Ingestão de Dados**, reunindo exemplos, exercícios e implementações relacionados a processos de ingestão e ETL.
+Repositório público referente às atividades da disciplina **eEDB-022-2026-3 – Ingestão de Dados**, reunindo exemplos, exercícios e implementações relacionados a processos de ingestão e ETL.
 
 ## Estrutura do repositório
 
@@ -42,7 +42,7 @@ O objetivo é demonstrar a aplicação de técnicas de Engenharia de Dados para 
 
 ## Objetivo
 
-Este repositório tem como objetivo documentar e disponibilizar os trabalhos desenvolvidos durante a disciplina **eDBD-022-2026-3 – Ingestão de Dados**, servindo também como material de estudo e referência para práticas de Engenharia de Dados.
+Este repositório tem como objetivo documentar e disponibilizar os trabalhos desenvolvidos durante a disciplina **eEDB-022-2026-3 – Ingestão de Dados**, servindo também como material de estudo e referência para práticas de Engenharia de Dados.
 
 ## Autor
 
