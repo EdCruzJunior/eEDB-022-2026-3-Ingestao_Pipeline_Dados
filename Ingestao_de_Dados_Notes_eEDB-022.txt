@@ -1,0 +1,151 @@
+docker compose -f tutoriais/streaming/1-infraestrutura/local/docker/docker-compose.yml os
+
+
+# Rodar no Linux ( Bash )
+
+aws --endpoint-url http://localhost:4566 s3 cp \
+  "$(aws --endpoint-url http://localhost:4566 s3 ls s3://datalake/filas/dt=$(date -u +%F)/ | awk '{print $4}' | head -1 | sed 's#^#s3://datalake/filas/dt='$(date -u +%F)'/#')" /tmp/lote.parquet
+python -c "import pyarrow.parquet as pq; t=pq.read_table(r'C:\Users\edvaldo.cruz\AppData\Local\Temp\lote.parquet'); print(t.column_names); print(t.num_rows)"
+
+
+# ['evento_id','cliente_id','produto_id','categoria','quantidade','valor_total','data_venda']
+# 50
+
+
+
+---------------------------------------------------------------------------------------------
+
+python -m pip install pyarrow
+aws --endpoint-url http://localhost:4566 s3 cp \
+  "$(aws --endpoint-url http://localhost:4566 s3 ls s3://datalake/spark/dt=$(date -u +%F)/ | awk '{print $4}' | head -1 | sed 's#^#s3://datalake/spark/dt='$(date -u +%F)'/#')" /tmp/janela.parquet
+python -c "import pyarrow.parquet as pq; print(pq.read_table('/tmp/janela.parquet').to_pylist())"
+# -> [{'categoria':'Alimentos','window_start':..:00,'window_end':..:30,'qtd_eventos':72,'faturamento':4550.0,'qtd_itens':218}]
+
+----------------------------------------------------------------------------------------------
+----------------------------------------------------------
+TUTORIAL PARA UTILIZAÇÃO DE HADOOP E HIVE NA AWS
+----------------------------------------------------------
+
+# 1- PreReq instalar credenciais da  AWS 
+
+# Criar diretorio AWS
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.aws"
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.ssh"
+
+# Copiar credenciais (ajuste o caminho do projeto)
+$projDir = "C:\Users\edvaldo.cruz\Documents\Engenharia_de_Dados\Engenharia_de_Dados\Ecosistema_Bigdata\eEDB-006-tutoriais\tutoriais\aws_credenciais"
+Copy-Item "$projDir\credentials" "$env:USERPROFILE\.aws\credentials"
+Copy-Item "$projDir\config" "$env:USERPROFILE\.aws\config"
+Copy-Item "$projDir\labsuser.pem" "$env:USERPROFILE\.ssh\labsuser.pem"
+
+# Validar conexao
+aws sts get-caller-identity
+
+------------------------------------------------------------------------------------------------
+
+
+# Listar instancias EC2
+aws ec2 describe-instances --query 'Reservations[].Instances[].{ID:InstanceId,State:State.Name,Type:InstanceType}'
+
+# Listar buckets S3
+aws s3 ls
+
+
+# Inicializar projeto Terraform
+terraform init
+
+# Ver plano de execucao
+terraform plan
+
+# Aplicar infraestrutura
+terraform apply
+
+--------------------------------------------------------------------------------------------------
+winget install EclipseAdoptium.Temurin.17.JDK   # marcar "Set JAVA_HOME"
+winget install Python.Python.3.11
+# winutils: baixar https://github.com/cdarlint/winutils (pasta hadoop-3.3.6\bin -> C:\hadoop\bin)
+setx HADOOP_HOME "C:\hadoop"
+setx PATH "$env:PATH;C:\hadoop\bin"
+# abrir um PowerShell NOVO depois disso
+
+------------------------------------------------------------------------------------------------
+
+pyspark \
+  --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.2 \
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+  --conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.local.type=hadoop \
+  --conf spark.sql.catalog.local.warehouse=warehouse
+spark.sql('CREATE TABLE local.db.teste (id INT, nome STRING) USING iceberg')
+spark.sql("INSERT INTO local.db.teste VALUES (1, 'spark'), (2, 'iceberg')")
+spark.sql("SELECT * FROM local.db.teste ORDER BY id").show()
+spark.sql("DROP TABLE local.db.teste PURGE")
+exit()
+
+
+---------------------------------------------------------------------------------------------------
+-----------------------------------
+# RECRIAR VARIAVEL DE AMBIENTE:
+-----------------------------------
+
+deactivate
+
+Remove-Item -Recurse -Force .venv
+
+py -3.11 -m venv .venv
+
+.\.venv\Scripts\Activate.ps1
+
+--------------------------------------------------------------------------------------------------------
+
+
+pyspark `
+  --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.2 `
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions `
+  --conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog `
+  --conf spark.sql.catalog.local.type=hadoop `
+  --conf spark.sql.catalog.local.warehouse=warehouse
+
+spark.sql("CREATE TABLE local.db.teste (id INT, nome STRING) USING iceberg")
+spark.sql("INSERT INTO local.db.teste VALUES (1, 'spark'), (2, 'iceberg')")
+spark.sql("SELECT * FROM local.db.teste ORDER BY id").show()
+spark.sql("DROP TABLE local.db.teste PURGE")
+exit()
+
+-----------------------------------------------------------------------------------------------------------------
+
+# PARA EXECUTAR DENTRO DO CONTAINER:
+
+docker exec -it spark /opt/spark/bin/spark-sql `
+  --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.2 `
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions `
+  --conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog `
+  --conf spark.sql.catalog.local.type=hadoop `
+  --conf spark.sql.catalog.local.warehouse=/opt/spark/work-dir/warehouse
+  -e "CREATE TABLE IF NOT EXISTS local.db.teste (id INT, nome STRING) USING iceberg; INSERT INTO local.db.teste VALUES (1, 'spark'), (2, 'iceberg'); SELECT * FROM local.db.teste ORDER BY id; DROP TABLE local.db.teste PURGE;"
+
+------------------------------------------------------------------------------------------------------------------
+
+--MELTANO
+
+
+# Apenas para a sessão atual do PowerShell
+$env:MELTANO_SEND_ANONYMOUS_USAGE_STATS="False"
+
+# Verifique se foi definido:
+
+echo $env:MELTANO_SEND_ANONYMOUS_USAGE_STATS
+
+Deve retornar:
+
+False
+
+---------------------------------------------------------------------------------------------------------------------
+
+$env:AWS_ACCESS_KEY_ID = "test"
+$env:AWS_SECRET_ACCESS_KEY = "test"
+$env:AWS_DEFAULT_REGION = "us-east-1"
+$env:AWS_REQUEST_CHECKSUM_CALCULATION = "when_required"
+
+
+

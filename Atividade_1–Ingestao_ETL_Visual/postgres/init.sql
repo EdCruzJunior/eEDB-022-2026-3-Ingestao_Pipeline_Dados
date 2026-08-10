@@ -1,0 +1,3 @@
+CREATE SCHEMA staging;
+
+CREATE SCHEMA dw;

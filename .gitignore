@@ -1,0 +1,11 @@
+# Ignore local dependency cache artifacts that are too large for GitHub
+Ecosistema_Bigdata/eEDB-006-tutoriais/tutoriais/streaming/1-infraestrutura/local/docker/ivy-cache/
+
+# Ignore large local data files that should not be committed
+# Replace with a more specific path if needed in the future
+dados_abertos.csv
+
+.env
+.venv/
+__pycache__/
+*.pyc

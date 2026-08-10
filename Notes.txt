@@ -1,0 +1,22 @@
+--------------------------
+-- Criação do DB PostgreS
+--------------------------
+Nome: etl
+
+--------------------------
+-- Aws Glue Crawler:
+--------------------------
+
+Nome: GlueEtlCrawler
+Role: AWSGlueServiceRole-
+
+Nome do Banco : etl_catalog
+
+---------------------------
+
+
+
+
+
+
+
