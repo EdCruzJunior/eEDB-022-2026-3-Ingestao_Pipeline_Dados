@@ -13,7 +13,7 @@ python -c "import pyarrow.parquet as pq; t=pq.read_table(r'C:\Users\edvaldo.cruz
 
 
 
----------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------
 
 python -m pip install pyarrow
 aws --endpoint-url http://localhost:4566 s3 cp \
