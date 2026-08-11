@@ -1,0 +1,5 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/Atividade_2–Ingestao_ETL_Python/.venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+  "python.envFile": "${workspaceFolder}/Atividade_2–Ingestao_ETL_Python/.env"
+}
