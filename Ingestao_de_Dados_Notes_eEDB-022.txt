@@ -9,7 +9,7 @@ python -c "import pyarrow.parquet as pq; t=pq.read_table(r'C:\Users\edvaldo.cruz
 
 
 # ['evento_id','cliente_id','produto_id','categoria','quantidade','valor_total','data_venda']
-# 50
+# 50 ---
 
 
 
