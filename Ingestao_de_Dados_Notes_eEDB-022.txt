@@ -1,7 +1,7 @@
 docker compose -f tutoriais/streaming/1-infraestrutura/local/docker/docker-compose.yml os
 
 
-# Rodar no Linux ( Bash ) ----
+# Rodar no Linux ( Bash ) 
 
 aws --endpoint-url http://localhost:4566 s3 cp \
   "$(aws --endpoint-url http://localhost:4566 s3 ls s3://datalake/filas/dt=$(date -u +%F)/ | awk '{print $4}' | head -1 | sed 's#^#s3://datalake/filas/dt='$(date -u +%F)'/#')" /tmp/lote.parquet
