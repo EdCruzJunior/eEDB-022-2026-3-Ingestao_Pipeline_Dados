@@ -1,6 +1,6 @@
 # ETL e Ingestão de Dados com Python — Reclamações do Sistema Financeiro + Enquadramento + Glassdoor
 
-## 1. Objetivo --
+## 1. Objetivo 
 
 Este projeto implementa uma solução de **ingestão, tratamento, integração e disponibilização de dados utilizando Python**, atendendo ao enunciado acadêmico:
 
@@ -19,7 +19,7 @@ Este projeto implementa uma solução de **ingestão, tratamento, integração e
 - Pandas
 - PyArrow
 - SQLAlchemy
-- Psycopg2
+- Psycopg ( Necessario alterar para a versão 3 do Psycopg : psycopg[binary]==3.3.4 )
 - python-dotenv
 - openpyxl
 - PostgreSQL
@@ -429,7 +429,7 @@ postgres-etl
 Windows:
 
 ```bash
-python -m venv .venv  #py -3.11 -m venv .venv ( para criação de um ambiente com o Python 3.11 )
+python -m venv .venv   #py -3.11 -m venv .venv ( para criação de um ambiente com o Python 3.11 )
 ```
 
 Ativar:
@@ -441,7 +441,7 @@ Ativar:
 Atualizar pip:
 
 ```bash
-python -m pip install --upgrade pip
+python -m pip install --upgrade pip0
 ```
 
 ---
@@ -454,7 +454,7 @@ Criar `requirements.txt`:
 pandas==2.2.3
 pyarrow==18.1.0
 SQLAlchemy==2.0.36
-psycopg2-binary==2.9.10
+psycopg[binary]==3.3.4
 python-dotenv==1.0.1
 openpyxl==3.1.5
 ```
@@ -464,7 +464,7 @@ Instalar:
 ```bash
 pip install -r requirements.txt
 ```
-
+> **Importante:** Este projeto utiliza o driver **psycopg 3** (`psycopg[binary]`), compatível com SQLAlchemy 2.x e PostgreSQL 15+, substituindo o antigo `psycopg2-binary`.
 ---
 
 # 10. Configurar conexão PostgreSQL
@@ -514,7 +514,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 
 DATABASE_URL = (
-    f"postgresql+psycopg2://"
+    f"postgresql+psycopg://"
     f"{DB_USER}:{DB_PASSWORD}@"
     f"{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )

@@ -29,6 +29,7 @@ def executar():
         print("=" * 70)
 
         resultado = subprocess.run(
+            
             [
                 sys.executable,
                 str(script)
