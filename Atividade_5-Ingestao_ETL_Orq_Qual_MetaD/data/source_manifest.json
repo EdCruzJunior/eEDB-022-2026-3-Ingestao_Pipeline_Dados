@@ -1,0 +1,32 @@
+{
+  "atividade": "Atividade 5 – Orquestração, Qualidade e Metadados",
+  "source_files": [
+    "2021_tri_01(4).csv",
+    "2021_tri_02(4).csv",
+    "2021_tri_03(4).csv",
+    "2021_tri_04(4).csv",
+    "2022_tri_01(4).csv",
+    "2022_tri_03(4).csv",
+    "2022_tri_04(4).csv",
+    "EnquadramentoInicia_v2(3).tsv",
+    "glassdoor_consolidado_join_match_v2(3).csv",
+    "glassdoor_consolidado_join_match_less_v2(3).csv"
+  ],
+  "quarterly_rows": {
+    "2021_tri_01(4).csv": 105,
+    "2021_tri_02(4).csv": 111,
+    "2021_tri_03(4).csv": 113,
+    "2021_tri_04(4).csv": 135,
+    "2022_tri_01(4).csv": 137,
+    "2022_tri_03(4).csv": 163,
+    "2022_tri_04(4).csv": 154
+  },
+  "quarterly_total_rows": 918,
+  "tools": {
+    "orchestrator": "Apache Airflow",
+    "quality": "Great Expectations",
+    "metadata": "OpenMetadata",
+    "database": "PostgreSQL",
+    "containerization": "Docker Compose"
+  }
+}

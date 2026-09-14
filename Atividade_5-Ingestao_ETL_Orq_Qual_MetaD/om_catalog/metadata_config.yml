@@ -1,0 +1,16 @@
+# Manifesto conceitual de metadados do pipeline.
+# O registro efetivo é executado por om_catalog/register.py.
+service:
+  name: atividade5-postgres
+  type: Postgres
+  description: PostgreSQL utilizado como camada de persistência do projeto.
+
+pipeline:
+  orchestrator: Apache Airflow
+  quality: Great Expectations
+  metadata: OpenMetadata
+
+layers:
+  - raw
+  - silver
+  - gold

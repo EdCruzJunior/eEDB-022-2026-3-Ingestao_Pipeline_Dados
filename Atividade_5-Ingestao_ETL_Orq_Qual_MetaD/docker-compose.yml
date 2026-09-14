@@ -1,0 +1,217 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: atividade5-postgres
+    environment:
+      POSTGRES_DB: atividade5
+      POSTGRES_USER: atividade
+      POSTGRES_PASSWORD: atividade123
+
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_airflow_db.sql:/docker-entrypoint-initdb.d/init_airflow_db.sql
+      - ./scripts/init_data_db.sql:/docker-entrypoint-initdb.d/init_data_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atividade -d atividade5"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    
+
+  airflow-init:
+    build: .
+    container_name: atividade5-airflow-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://atividade:atividade123@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.session,airflow.api.auth.backend.basic_auth
+      AIRFLOW__CORE__FERNET_KEY: "2b9e8c5c1a4d7f9e0c1b3a5d7f9e2c4a"
+      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate &&
+        airflow users create --username admin --password admin --firstname Admin --lastname Admin --role Admin --email admin@example.com || true
+
+  airflow-webserver:
+    build: .
+    container_name: atividade5-airflow-webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:      
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://atividade:atividade123@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.session,airflow.api.auth.backend.basic_auth
+      AIRFLOW__OPENMETADATA_AIRFLOW_APIS__DAG_GENERATED_CONFIGS: /opt/airflow/dags/generated_configs
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
+      AIRFLOW__CORE__FERNET_KEY: "2b9e8c5c1a4d7f9e0c1b3a5d7f9e2c4a"
+      AIRFLOW__WEBSERVER__BASE_URL: http://airflow-webserver:8080
+      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+
+      OPENMETADATA_HOST: openmetadata-server
+      OPENMETADATA_PORT: "8585"
+      OPENMETADATA_USER: admin
+      OPENMETADATA_PASSWORD: admin
+    volumes:
+      - ./dags:/opt/airflow/dags      
+      - ./ingestion:/opt/airflow/ingestion
+      - ./quality:/opt/airflow/quality
+      - ./transformation:/opt/airflow/transformation
+      - ./om_catalog:/opt/airflow/om_catalog
+      - ./sql:/opt/airflow/sql
+      - ./data:/opt/airflow/data
+      - ./logs:/opt/airflow/logs
+      
+    ports:
+      - "8084:8080"
+    command: webserver
+    restart: unless-stopped
+
+  airflow-scheduler:
+    build: .
+    container_name: atividade5-airflow-scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:     
+      AIRFLOW__OPENMETADATA_AIRFLOW_APIS__DAG_GENERATED_CONFIGS: /opt/airflow/dags/generated_configs
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://atividade:atividade123@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.session,airflow.api.auth.backend.basic_auth
+      AIRFLOW__CORE__FERNET_KEY: "2b9e8c5c1a4d7f9e0c1b3a5d7f9e2c4a"
+      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+
+      OPENMETADATA_HOST: openmetadata-server
+      OPENMETADATA_PORT: "8585"
+      OPENMETADATA_USER: admin
+      OPENMETADATA_PASSWORD: admin
+    volumes:
+      - ./dags:/opt/airflow/dags      
+      - ./ingestion:/opt/airflow/ingestion
+      - ./quality:/opt/airflow/quality
+      - ./transformation:/opt/airflow/transformation
+      - ./om_catalog:/opt/airflow/om_catalog
+      - ./sql:/opt/airflow/sql
+      - ./data:/opt/airflow/data
+      - ./logs:/opt/airflow/logs
+      
+     
+    command: scheduler
+    restart: unless-stopped
+
+  # OpenMetadata dependencies
+  mysql:
+    image: mysql:8.0
+    container_name: atividade5-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: openmetadata_db
+      MYSQL_USER: openmetadata_user
+      MYSQL_PASSWORD: openmetadata_password
+    command: --sort_buffer_size=10M
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uopenmetadata_user", "-popenmetadata_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: atividade5-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  openmetadata-init:
+    image: openmetadata/server:1.6.6
+    container_name: atividade5-openmetadata-init
+    depends_on:
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
+      DB_SCHEME: mysql
+      DB_USE_SSL: "false"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      OM_DATABASE: openmetadata_db
+      DB_USER: openmetadata_user
+      DB_USER_PASSWORD: openmetadata_password
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      ELASTICSEARCH_SCHEME: http
+      ELASTICSEARCH_USER: ""
+      ELASTICSEARCH_PASSWORD: ""
+    entrypoint: ["/opt/openmetadata/bootstrap/openmetadata-ops.sh"]
+    command: ["migrate"]
+    restart: "no"
+
+  openmetadata-server:
+    image: openmetadata/server:1.6.6
+    container_name: atividade5-openmetadata
+    depends_on:
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      openmetadata-init:
+        condition: service_completed_successfully
+    environment:
+       PIPELINE_SERVICE_CLIENT_ENDPOINT: http://airflow-webserver:8080
+       PIPELINE_SERVICE_CLIENT_CLASS_NAME: org.openmetadata.service.clients.pipeline.airflow.AirflowRESTClient
+       PIPELINE_SERVICE_CLIENT_ENABLED: "true"
+       
+       AIRFLOW_USERNAME: admin
+       AIRFLOW_PASSWORD: admin
+       SERVER_HOST_API_URL: http://openmetadata-server:8585/api
+       DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
+       DB_SCHEME: mysql
+       DB_USE_SSL: "false"
+       DB_HOST: mysql
+       DB_PORT: 3306
+       OM_DATABASE: openmetadata_db
+       DB_USER: openmetadata_user
+       DB_USER_PASSWORD: openmetadata_password
+       ELASTICSEARCH_HOST: elasticsearch
+       ELASTICSEARCH_PORT: 9200
+       ELASTICSEARCH_SCHEME: http
+       ELASTICSEARCH_USER: ""
+       ELASTICSEARCH_PASSWORD: ""
+    ports:
+      - "8585:8585"
+    restart: unless-stopped
+
+volumes:
+  postgres_data: 
+  mysql_data:
+  elasticsearch_data:
