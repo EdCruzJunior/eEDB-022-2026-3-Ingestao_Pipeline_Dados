@@ -1,0 +1,8 @@
+{
+  "event_id": "evt-000001",
+  "timestamp": "2026-09-16T09:00:00",
+  "tipo": "reclamacao",
+  "cnpj": "00000000000100",
+  "instituicao": "BANCO TESTE",
+  "quantidade": 10
+}
