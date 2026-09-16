@@ -1,0 +1,59 @@
+services:
+
+  spark-master:
+    build: .
+    container_name: spark-master
+    hostname: spark-master
+
+    env_file:
+      - .env
+
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      AWS_REGION: ${AWS_DEFAULT_REGION}
+
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
+      --host spark-master
+      --port 7077
+      --webui-port 8080
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./data:/opt/project/data
+      - ./src:/opt/project/src
+      - ./output:/opt/project/output
+
+  spark-worker:
+    build: .
+    container_name: spark-worker
+    hostname: spark-worker
+    depends_on:
+      - spark-master
+
+    env_file:
+      - .env
+
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      AWS_REGION: ${AWS_DEFAULT_REGION}
+      
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+      --webui-port 8081
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./data:/opt/project/data
+      - ./src:/opt/project/src
+      - ./output:/opt/project/output
