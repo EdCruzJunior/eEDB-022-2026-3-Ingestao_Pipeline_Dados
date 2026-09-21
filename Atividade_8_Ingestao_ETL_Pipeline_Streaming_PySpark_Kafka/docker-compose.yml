@@ -1,0 +1,124 @@
+services:
+  kafka:
+    image: bitnamilegacy/kafka:3.7
+    container_name: streaming-kafka
+    ports:
+      - "9094:9094"
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  kafka-init:
+    image: bitnamilegacy/kafka:3.7
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "/opt/bitnami/kafka/bin/kafka-topics.sh
+      --bootstrap-server kafka:9092
+      --create --if-not-exists
+      --topic reclamacoes --partitions 3 --replication-factor 1"
+
+  postgres:
+    image: postgres:16
+    container_name: streaming-postgres
+    environment:
+      POSTGRES_DB: streaming
+      POSTGRES_USER: streaming
+      POSTGRES_PASSWORD: streaming
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data:/data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U streaming -d streaming"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-init:
+    image: python:3.11-slim
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data:/data:ro
+      - ./db:/app:ro
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DB: streaming
+      PG_USER: streaming
+      PG_PASSWORD: streaming
+      DATA_DIR: /data
+    command: >
+      bash -c "pip install --no-cache-dir psycopg2-binary==2.9.10 &&
+      python /app/init_db.py"
+
+  producer:
+    image: python:3.11-slim
+    container_name: streaming-producer
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./data:/data:ro
+      - ./producer:/app:ro
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_TOPIC: reclamacoes
+      DATA_DIR: /data
+      PRODUCER_DELAY: 0.10
+    command: >
+      bash -c "pip install --no-cache-dir -r /app/requirements.txt &&
+      python /app/producer.py"
+
+  spark-consumer:
+    image: apache/spark:3.5.1-python3
+    container_name: streaming-spark-consumer
+    user: root
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      db-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./consumer:/app:ro
+      - ./output:/data/output
+      - ./checkpoint:/data/checkpoint
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_TOPIC: reclamacoes
+      CHECKPOINT_DIR: /data/checkpoint
+      OUTPUT_DIR: /data/output
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DB: streaming
+      PG_USER: streaming
+      PG_PASSWORD: streaming
+    command: >
+      bash -c "pip install --no-cache-dir psycopg2-binary==2.9.10 &&
+      /opt/spark/bin/spark-submit
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1
+      /app/consumer.py"
+
+volumes:
+  kafka_data:
+  postgres_data:
