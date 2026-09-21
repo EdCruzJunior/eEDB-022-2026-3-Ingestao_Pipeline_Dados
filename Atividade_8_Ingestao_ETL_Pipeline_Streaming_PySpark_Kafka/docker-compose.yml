@@ -35,6 +35,20 @@ services:
       --create --if-not-exists
       --topic reclamacoes --partitions 3 --replication-factor 1"
 
+  # NOVO SERVIÇO
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: streaming-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-kafka
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+
   postgres:
     image: postgres:16
     container_name: streaming-postgres
