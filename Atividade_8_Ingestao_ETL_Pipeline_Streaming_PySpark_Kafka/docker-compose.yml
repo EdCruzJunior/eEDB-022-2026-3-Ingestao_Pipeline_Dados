@@ -113,6 +113,8 @@ services:
         condition: service_completed_successfully
       db-init:
         condition: service_completed_successfully
+    ports:
+      - "4040:4040"
     volumes:
       - ./consumer:/app:ro
       - ./output:/data/output
@@ -130,6 +132,9 @@ services:
     command: >
       bash -c "pip install --no-cache-dir psycopg2-binary==2.9.10 &&
       /opt/spark/bin/spark-submit
+      --master local[*]
+      --conf spark.ui.port=4040
+      --conf spark.ui.bindAddress=0.0.0.0
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1
       /app/consumer.py"
 
