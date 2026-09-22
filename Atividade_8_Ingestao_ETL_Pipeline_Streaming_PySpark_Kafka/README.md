@@ -153,6 +153,68 @@ Listar o tópico:
 docker exec -it streaming-kafka /opt/bitnami/kafka/bin/kafka-topics.sh   --bootstrap-server localhost:9092 --describe --topic reclamacoes
 ```
 
+
+## 7A. Kafka UI – Monitoramento visual do Kafka
+
+Além dos comandos de terminal, o projeto utiliza a **Kafka UI v0.7.2** para acompanhar visualmente o cluster, os tópicos e as mensagens.
+
+### 7A.1 Iniciar a Kafka UI
+
+```powershell
+docker compose up -d kafka-ui
+docker compose ps
+```
+
+A porta publicada deve aparecer como:
+
+```text
+0.0.0.0:8080->8080/tcp
+```
+
+### 7A.2 Acessar a interface
+
+Abrir no navegador:
+
+```text
+http://localhost:8080
+```
+
+O cluster utilizado é:
+
+```text
+local-kafka
+```
+
+### 7A.3 Consultar o tópico `reclamacoes`
+
+Na Kafka UI:
+
+1. Acessar **Topics**.
+2. Selecionar **reclamacoes**.
+3. Abrir **Messages**.
+4. Verificar as mensagens produzidas pelo `producer.py`.
+5. Observar **Partition**, **Offset** e conteúdo da mensagem.
+
+Conceitos demonstrados:
+
+- **Topic:** canal lógico de eventos.
+- **Partition:** divisão do tópico para paralelismo.
+- **Offset:** posição da mensagem dentro da partição.
+- **Message:** evento publicado pelo Producer.
+
+A Kafka UI constitui uma evidência visual da etapa:
+
+```text
+Python Producer
+      |
+      v
+Kafka Topic: reclamacoes
+      |
+      +--> Partitions
+      +--> Offsets
+      +--> Messages
+```
+
 ## 8. Conferir os arquivos enriquecidos
 
 Depois do produtor terminar e os micro-batches serem processados:
@@ -225,6 +287,139 @@ def process_batch(batch_df, batch_id):
 
 Isso atende ao requisito de receber uma janela de informações e fazer a consulta SQL para enriquecê-la.
 
+
+## 10A. Spark UI – Monitoramento do PySpark Structured Streaming
+
+O projeto utiliza a **Spark UI** para demonstrar visualmente a execução do consumidor PySpark e dos micro-batches.
+
+### 10A.1 Configuração da porta 4040
+
+No serviço `spark-consumer`, publicar:
+
+```yaml
+ports:
+  - "4040:4040"
+```
+
+E utilizar no `spark-submit`:
+
+```text
+--master local[*]
+--conf spark.ui.port=4040
+--conf spark.ui.bindAddress=0.0.0.0
+```
+
+### 10A.2 Iniciar o consumidor
+
+Para manter a Spark UI disponível:
+
+```powershell
+docker compose up spark-consumer
+```
+
+Deixe o terminal executando.
+
+Verificar:
+
+```powershell
+docker port streaming-spark-consumer
+```
+
+Resultado esperado:
+
+```text
+4040/tcp -> 0.0.0.0:4040
+```
+
+### 10A.3 Acessar a Spark UI
+
+Abrir:
+
+```text
+http://localhost:4040
+```
+
+A aplicação apresentada é:
+
+```text
+PipelineStreamingPySparkKafka
+```
+
+Abas relevantes:
+
+- **Jobs**
+- **Stages**
+- **Storage**
+- **Environment**
+- **Executors**
+- **SQL / DataFrame**
+- **Structured Streaming**
+
+### 10A.4 Acompanhar o processamento
+
+Na aba **Jobs**, é possível acompanhar Jobs ativos e concluídos, duração, Stages e Tasks.
+
+Na execução utilizada como evidência da atividade, a Spark UI apresentou:
+
+```text
+Spark 3.5.1
+Active Jobs: 1
+Completed Jobs: 4
+batch = 42
+Stages: 4/5
+Tasks: 31/32
+```
+
+Também foram observadas tarefas concluídas como:
+
+```text
+7/7
+7/7
+1/1
+```
+
+Essa evidência demonstra que o consumidor PySpark Structured Streaming está efetivamente processando as mensagens recebidas do Kafka.
+
+### 10A.5 Kafka UI x Spark UI
+
+As duas interfaces são complementares:
+
+```text
+             KAFKA UI
+          localhost:8080
+                |
+                v
+     Topic: reclamacoes
+                |
+                v
+      PySpark Structured
+          Streaming
+                |
+                v
+             SPARK UI
+          localhost:4040
+```
+
+A **Kafka UI** demonstra a camada de mensageria; a **Spark UI** demonstra o processamento dos eventos em Jobs, Stages, Tasks e micro-batches.
+
+### 10A.6 Consumer Group
+
+Na aba **Consumers** da Kafka UI pode não aparecer um Consumer Group tradicional correspondente ao Spark Structured Streaming. Isso não significa que o Spark não esteja consumindo as mensagens.
+
+Para a atividade, a evidência do consumidor deve ser apresentada em conjunto:
+
+```text
+Kafka UI
++
+Spark UI
++
+Logs do Spark
++
+Arquivos Parquet
+```
+
+Não é necessário criar artificialmente um `group.id` apenas para fazer o Job Structured Streaming aparecer como Consumer Group tradicional.
+
 ## 11. Reset completo
 
 Para repetir a atividade do zero:
@@ -272,12 +467,14 @@ O arquivo `2022_tri_02` não está presente entre os anexos recebidos; o pipelin
 Recomenda-se capturar:
 1. `docker compose ps`;
 2. tópico Kafka criado;
-3. mensagens no Kafka;
-4. logs do produtor;
-5. logs do Spark;
-6. consulta das tabelas PostgreSQL;
-7. arquivos Parquet em `output/`;
-8. amostra dos dados finais enriquecidos.
+3. **Kafka UI (`http://localhost:8080`) com o tópico `reclamacoes` e mensagens**;
+4. mensagens no Kafka;
+5. logs do produtor;
+6. logs do Spark;
+7. **Spark UI (`http://localhost:4040`) com Jobs, Stages, Tasks e micro-batch em processamento**;
+8. consulta das tabelas PostgreSQL;
+9. arquivos Parquet em `output/`;
+10. amostra dos dados finais enriquecidos.
 
 ## 14. Comandos principais resumidos
 
@@ -306,3 +503,96 @@ Terminal 4, opcional:
 ```bash
 docker exec -it streaming-kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh   --bootstrap-server localhost:9092   --topic reclamacoes
 ```
+
+
+## 15. Roteiro integrado para a demonstração
+
+### Terminal 1 – Infraestrutura
+
+```powershell
+docker compose up -d kafka postgres
+docker compose run --rm kafka-init
+docker compose run --rm db-init
+docker compose up -d kafka-ui
+```
+
+### Terminal 2 – Spark Consumer
+
+```powershell
+docker compose up spark-consumer
+```
+
+Abrir:
+
+```text
+http://localhost:4040
+```
+
+### Terminal 3 – Producer
+
+```powershell
+docker compose run --rm producer
+```
+
+### Kafka UI
+
+Abrir:
+
+```text
+http://localhost:8080
+```
+
+Navegar até:
+
+```text
+Topics
+  -> reclamacoes
+     -> Messages
+```
+
+### Spark UI
+
+Abrir:
+
+```text
+http://localhost:4040
+```
+
+Navegar até:
+
+```text
+Jobs
+```
+
+e consultar também:
+
+```text
+Structured Streaming
+```
+
+### Fluxo demonstrado
+
+```text
+CSV/TSV
+   |
+   v
+Python Producer
+   |
+   v
+Kafka / reclamacoes
+   |
+   +--------------------> Kafka UI :8080
+   |
+   v
+PySpark Structured Streaming
+   |
+   +--------------------> Spark UI :4040
+   |
+   v
+PostgreSQL
+   |
+   v
+Parquet
+```
+
+A demonstração evidencia separadamente a camada de mensageria e o processamento streaming, mantendo o PostgreSQL como fonte de enriquecimento e o Parquet como saída final.
